@@ -23,6 +23,11 @@ class SpinningWheel extends StatefulWidget {
   /// number of equal divisions in the wheel
   final int dividers;
 
+  /// label for each items
+  final List<Widget> labels;
+
+  final double labelShift;
+
   /// initial rotation angle from 0.0 to 2*pi
   /// default is 0.0
   final double initialSpinAngle;
@@ -79,18 +84,19 @@ class SpinningWheel extends StatefulWidget {
     this.onUpdate,
     this.onEnd,
     this.shouldStartOrStop,
+    this.labels,
+    this.labelShift = 120,
   })  : assert(width > 0.0 && height > 0.0),
         assert(spinResistance > 0.0 && spinResistance <= 1.0),
         assert(initialSpinAngle >= 0.0 && initialSpinAngle <= (2 * pi)),
-        assert(secondaryImage == null ||
-            (secondaryImageHeight <= height && secondaryImageWidth <= width));
+        assert(secondaryImage == null || (secondaryImageHeight <= height && secondaryImageWidth <= width)),
+        assert(labels == null || labels.length == dividers);
 
   @override
   _SpinningWheelState createState() => _SpinningWheelState();
 }
 
-class _SpinningWheelState extends State<SpinningWheel>
-    with SingleTickerProviderStateMixin {
+class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProviderStateMixin {
   AnimationController _animationController;
   Animation<double> _animation;
 
@@ -135,6 +141,8 @@ class _SpinningWheelState extends State<SpinningWheel>
   // subscription to the stream used to trigger an animation
   StreamSubscription _subscription;
 
+  List<Widget> _labels;
+
   @override
   void initState() {
     super.initState();
@@ -146,8 +154,8 @@ class _SpinningWheelState extends State<SpinningWheel>
       vsync: this,
       duration: Duration(seconds: 0),
     );
-    _animation = Tween(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(parent: _animationController, curve: Curves.linear));
+    _animation =
+        Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animationController, curve: Curves.linear));
 
     _dividerAngle = _motion.anglePerDivision(widget.dividers);
     _initialSpinAngle = widget.initialSpinAngle;
@@ -159,6 +167,25 @@ class _SpinningWheelState extends State<SpinningWheel>
 
     if (widget.shouldStartOrStop != null) {
       _subscription = widget.shouldStartOrStop.listen(_startOrStop);
+    }
+
+    _labels = [];
+    if (widget.labels != null) {
+      for (int i = 0; i < widget.dividers ?? []; ++i) {
+        _labels.add(
+          Container(
+            transform: Matrix4.translationValues(0, 0, 0),
+            alignment: Alignment.center,
+            child: Transform.rotate(
+              angle: (i) * _dividerAngle+widget.initialSpinAngle,
+              child: Container(
+                transform: Matrix4.translationValues(widget.labelShift, 0, 0),
+                child: widget.labels[i],
+              ),
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -174,18 +201,13 @@ class _SpinningWheelState extends State<SpinningWheel>
     }
   }
 
-  double get topSecondaryImage =>
-      widget.secondaryImageTop ??
-      (widget.height / 2) - (widget.secondaryImageHeight / 2);
+  double get topSecondaryImage => widget.secondaryImageTop ?? (widget.height / 2) - (widget.secondaryImageHeight / 2);
 
-  double get leftSecondaryImage =>
-      widget.secondaryImageLeft ??
-      (widget.width / 2) - (widget.secondaryImageWidth / 2);
+  double get leftSecondaryImage => widget.secondaryImageLeft ?? (widget.width / 2) - (widget.secondaryImageWidth / 2);
 
   double get widthSecondaryImage => widget.secondaryImageWidth ?? widget.width;
 
-  double get heightSecondaryImage =>
-      widget.secondaryImageHeight ?? widget.height;
+  double get heightSecondaryImage => widget.secondaryImageHeight ?? widget.height;
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +222,7 @@ class _SpinningWheelState extends State<SpinningWheel>
             onPanDown: (_details) => _stopAnimation(),
             child: AnimatedBuilder(
                 animation: _animation,
-                child: Container(child: widget.image),
+                child: Stack(children: [widget.image, ..._labels]),
                 builder: (context, child) {
                   _updateAnimationValues();
                   widget.onUpdate(_currentDivider);
@@ -226,8 +248,7 @@ class _SpinningWheelState extends State<SpinningWheel>
   }
 
   // user can interact only if widget allows or wheel is not spinning
-  bool get _userCanInteract =>
-      !_animationController.isAnimating || widget.canInteractWhileSpinning;
+  bool get _userCanInteract => !_animationController.isAnimating || widget.canInteractWhileSpinning;
 
   // transforms from global coordinates to local and store the value
   void _updateLocalPosition(Offset position) {
@@ -245,8 +266,7 @@ class _SpinningWheelState extends State<SpinningWheel>
     if (_animationController.isAnimating) {
       // calculate total distance covered
       var currentTime = _totalDuration * _animation.value;
-      _currentDistance =
-          _motion.distance(_initialCircularVelocity, currentTime);
+      _currentDistance = _motion.distance(_initialCircularVelocity, currentTime);
       if (_isBackwards) {
         _currentDistance = -_currentDistance;
       }
@@ -310,16 +330,14 @@ class _SpinningWheelState extends State<SpinningWheel>
   }
 
   void _startAnimation(Offset pixelsPerSecond) {
-    var velocity =
-        _spinVelocity.getVelocity(_localPositionOnPanUpdate, pixelsPerSecond);
+    var velocity = _spinVelocity.getVelocity(_localPositionOnPanUpdate, pixelsPerSecond);
 
     _localPositionOnPanUpdate = null;
     _isBackwards = velocity < 0;
     _initialCircularVelocity = pixelsPerSecondToRadians(velocity.abs());
     _totalDuration = _motion.duration(_initialCircularVelocity);
 
-    _animationController.duration =
-        Duration(milliseconds: (_totalDuration * 1000).round());
+    _animationController.duration = Duration(milliseconds: (_totalDuration * 1000).round());
 
     _animationController.reset();
     _animationController.forward();
