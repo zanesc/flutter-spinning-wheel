@@ -1,12 +1,12 @@
 import 'dart:async';
+
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_spinning_wheel/flutter_spinning_wheel.dart';
 
 void main() {
-  SystemChrome.setEnabledSystemUIOverlays([]);
+  //SystemChrome.setEnabledSystemUIOverlays([]);
   runApp(MyApp());
 }
 
@@ -93,7 +93,7 @@ class Basic extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SpinningWheel(
-              Image.asset('assets/images/wheel-6-300.png'),
+              backPanel: Image.asset('assets/images/wheel-6-300.png'),
               width: 310,
               height: 310,
               initialSpinAngle: _generateRandomAngle(),
@@ -101,11 +101,21 @@ class Basic extends StatelessWidget {
               dividers: 6,
               onUpdate: _dividerController.add,
               onEnd: _dividerController.add,
+              labels: List.generate(
+                6,
+                (index) => Text(
+                  "Items $index",
+                  style: TextStyle(shadows: [
+                    Shadow(
+                      offset: Offset(1, 1),
+                    ),
+                  ]),
+                ),
+              ),
             ),
             StreamBuilder(
               stream: _dividerController.stream,
-              builder: (context, snapshot) =>
-                  snapshot.hasData ? BasicScore(snapshot.data) : Container(),
+              builder: (context, snapshot) => snapshot.hasData ? BasicScore(snapshot.data) : Container(),
             )
           ],
         ),
@@ -132,19 +142,41 @@ class BasicScore extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('${labels[selected]}',
-        style: TextStyle(fontStyle: FontStyle.italic));
+    return Text('${labels[selected]}', style: TextStyle(fontStyle: FontStyle.italic));
   }
 }
 
-class Roulette extends StatelessWidget {
-  final StreamController _dividerController = StreamController<int>();
+class Roulette extends StatefulWidget {
+  @override
+  _RouletteState createState() => _RouletteState();
+}
+
+class _RouletteState extends State<Roulette> {
+  final StreamController<int> _dividerController = StreamController<int>();
 
   final _wheelNotifier = StreamController<double>();
+
+  double _resistance = 0.001;
 
   dispose() {
     _dividerController.close();
     _wheelNotifier.close();
+    super.dispose();
+  }
+
+  Widget _spanLine(int dev, Widget back) {
+    return Stack(
+      children: <Widget>[
+        back,
+        Container(
+          width: 310,
+          height: 310,
+          child: CustomPaint(
+            painter: Lines(dev, 3),
+          ),
+        )
+      ],
+    );
   }
 
   @override
@@ -157,38 +189,78 @@ class Roulette extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SpinningWheel(
-              Image.asset('assets/images/roulette-8-300.png'),
+              backPanel: _spanLine(8, Image.asset('assets/images/roulette-8-300.png')),
               width: 310,
               height: 310,
-              initialSpinAngle: _generateRandomAngle(),
-              spinResistance: 0.6,
-              canInteractWhileSpinning: false,
+              initialSpinAngle: pi / 8, //_generateRandomAngle(),
+              spinResistance: _resistance,
+              canInteractWhileSpinning: true,
               dividers: 8,
               onUpdate: _dividerController.add,
               onEnd: _dividerController.add,
-              secondaryImage:
-                  Image.asset('assets/images/roulette-center-300.png'),
-              secondaryImageHeight: 110,
-              secondaryImageWidth: 110,
+              frontPanel: Container(
+                  width: 40,
+                  height: 40,
+                  transform: Matrix4.translationValues(135, 135, 0),
+                  child: Image.asset('assets/images/roulette-center-300.png')),
               shouldStartOrStop: _wheelNotifier.stream,
+              labels: List.generate(
+                8,
+                (index) => Container(
+                  // transform: Matrix4(1, 0, 0,
+                  // -0.009, 0, 1, 0, 0.000, 0, 0, 1, 0, 0, 0, 0, 1),
+                  child: Text(
+                    "Items ${index + 1}",
+                    style: TextStyle(shadows: [
+                      Shadow(
+                        offset: Offset(1, 1),
+                      ),
+                    ]),
+                  ),
+                ),
+              ),
             ),
             SizedBox(height: 30),
             StreamBuilder(
-              stream: _dividerController.stream,
-              builder: (context, snapshot) =>
-                  snapshot.hasData ? RouletteScore(snapshot.data) : Container(),
-            ),
+                stream: _dividerController.stream,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    if (currentIndex == snapshot.data) {
+                      _wheelNotifier.sink.add(0);
+                    }
+                    return RouletteScore(snapshot.data);
+                  } else {
+                    return Container();
+                  }
+                }),
             SizedBox(height: 30),
             new RaisedButton(
               child: new Text("Start"),
-              onPressed: () =>
-                  _wheelNotifier.sink.add(_generateRandomVelocity()),
+              onPressed: () {
+                currentIndex = -1;
+                _wheelNotifier.sink.add(5000);
+              },
+              //onPressed: () => _wheelNotifier.sink.add(_generateRandomVelocity()),
+            ),
+            new RaisedButton(
+              child: new Text("Stop"),
+              onPressed: () {
+                //_resistance = 0.8;
+                //_wheelNotifier.sink.add(100);
+                //if( _dividerController.stream. )
+                currentIndex = 2;
+                //StepState.editing
+                //setState(() {});
+              },
+              //onPressed: () => _wheelNotifier.sink.add(_generateRandomVelocity()),
             )
           ],
         ),
       ),
     );
   }
+
+  int currentIndex = 0;
 
   double _generateRandomVelocity() => (Random().nextDouble() * 6000) + 2000;
 
@@ -213,7 +285,54 @@ class RouletteScore extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text('${labels[selected]}',
-        style: TextStyle(fontStyle: FontStyle.italic, fontSize: 24.0));
+    return Text('${labels[selected]}', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 24.0));
+  }
+}
+
+class Lines extends CustomPainter {
+  final int divider;
+  final double lineWidth;
+
+  Paint _paint;
+  Lines(this.divider, this.lineWidth) {}
+
+  void _makePaint(Rect rect) {
+    final shader = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [
+      Color.fromRGBO(190, 139, 69, 1),
+      Color.fromRGBO(205, 167, 119, 1),
+      Color.fromRGBO(232, 211, 175, 1),
+      Color.fromRGBO(205, 167, 119, 1),
+      Color.fromRGBO(190, 139, 69, 1),
+    ]).createShader(rect);
+    _paint = Paint()..shader = shader;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path();
+    final halfWidth = lineWidth / 2;
+    final halfW = size.width / 2;
+    final halfH = size.height / 2;
+
+    Rect rect = Rect.fromLTWH(-halfW, -halfWidth, size.width, 2 * halfWidth);
+    // path.addArc(rect, 0, 2 * pi);
+    // path.close();
+    if (_paint == null) {
+      _makePaint(rect);
+    }
+
+    //canvas.drawPath(path, paint);
+    canvas.translate(size.width / 2, size.height / 2);
+
+    canvas.drawArc(rect, 0, 2 * pi, true, _paint);
+    for (var i = 0; i < divider; ++i) {
+      canvas.rotate(2 * pi / divider);
+      canvas.drawArc(rect, 0, 2 * pi, true, _paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter painter) {
+    return ((painter as Lines)?.divider ?? 0) != divider;
   }
 }

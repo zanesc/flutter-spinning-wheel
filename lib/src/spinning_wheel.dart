@@ -18,7 +18,10 @@ class SpinningWheel extends StatefulWidget {
   final double height;
 
   /// image that will be used as wheel
-  final Image image;
+  //final Image image;
+
+  /// background
+  final Widget  backPanel;
 
   /// number of equal divisions in the wheel
   final int dividers;
@@ -41,21 +44,22 @@ class SpinningWheel extends StatefulWidget {
   final bool canInteractWhileSpinning;
 
   /// will be rendered on top of the wheel and can be used to show a selector
-  final Image secondaryImage;
+  //final Image secondaryImage;
+  final Widget frontPanel;
 
   /// x dimension for the secondaty image, if provided
   /// if provided, has to be smaller than widget height
-  final double secondaryImageHeight;
+  //final double secondaryImageHeight;
 
   /// y dimension for the secondary image, if provided
   /// if provided, has to be smaller than widget width
-  final double secondaryImageWidth;
+  //final double secondaryImageWidth;
 
   /// can be used to fine tune the position for the secondary image, otherwise it will be centered
-  final double secondaryImageTop;
+  //final double secondaryImageTop;
 
   /// can be used to fine tune the position for the secondary image, otherwise it will be centered
-  final double secondaryImageLeft;
+  //final double secondaryImageLeft;
 
   /// callback function to be executed when the wheel selection changes
   final Function onUpdate;
@@ -69,18 +73,15 @@ class SpinningWheel extends StatefulWidget {
   final Stream shouldStartOrStop;
 
   SpinningWheel(
-    this.image, {
+    {
     @required this.width,
     @required this.height,
     @required this.dividers,
+    this.backPanel,
     this.initialSpinAngle: 0.0,
     this.spinResistance: 0.5,
     this.canInteractWhileSpinning: true,
-    this.secondaryImage,
-    this.secondaryImageHeight,
-    this.secondaryImageWidth,
-    this.secondaryImageTop,
-    this.secondaryImageLeft,
+    this.frontPanel,
     this.onUpdate,
     this.onEnd,
     this.shouldStartOrStop,
@@ -89,7 +90,6 @@ class SpinningWheel extends StatefulWidget {
   })  : assert(width > 0.0 && height > 0.0),
         assert(spinResistance > 0.0 && spinResistance <= 1.0),
         assert(initialSpinAngle >= 0.0 && initialSpinAngle <= (2 * pi)),
-        assert(secondaryImage == null || (secondaryImageHeight <= height && secondaryImageWidth <= width)),
         assert(labels == null || labels.length == dividers);
 
   @override
@@ -179,7 +179,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
             child: Transform.rotate(
               angle: (i) * _dividerAngle+widget.initialSpinAngle,
               child: Container(
-                transform: Matrix4.translationValues(widget.labelShift, 0, 0),
+                transform: Matrix4.translationValues(0, -widget.labelShift, 0),
                 child: widget.labels[i],
               ),
             ),
@@ -201,13 +201,13 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
     }
   }
 
-  double get topSecondaryImage => widget.secondaryImageTop ?? (widget.height / 2) - (widget.secondaryImageHeight / 2);
+  // double get topSecondaryImage => widget.secondaryImageTop ?? (widget.height / 2) - (widget.secondaryImageHeight / 2);
 
-  double get leftSecondaryImage => widget.secondaryImageLeft ?? (widget.width / 2) - (widget.secondaryImageWidth / 2);
+  // double get leftSecondaryImage => widget.secondaryImageLeft ?? (widget.width / 2) - (widget.secondaryImageWidth / 2);
 
-  double get widthSecondaryImage => widget.secondaryImageWidth ?? widget.width;
+  // double get widthSecondaryImage => widget.secondaryImageWidth ?? widget.width;
 
-  double get heightSecondaryImage => widget.secondaryImageHeight ?? widget.height;
+  // double get heightSecondaryImage => widget.secondaryImageHeight ?? widget.height;
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +222,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
             onPanDown: (_details) => _stopAnimation(),
             child: AnimatedBuilder(
                 animation: _animation,
-                child: Stack(children: [widget.image, ..._labels]),
+                child: Stack(children: [widget.backPanel, ..._labels]),
                 builder: (context, child) {
                   _updateAnimationValues();
                   widget.onUpdate(_currentDivider);
@@ -232,16 +232,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
                   );
                 }),
           ),
-          widget.secondaryImage != null
-              ? Positioned(
-                  top: topSecondaryImage,
-                  left: leftSecondaryImage,
-                  child: Container(
-                    height: heightSecondaryImage,
-                    width: widthSecondaryImage,
-                    child: widget.secondaryImage,
-                  ))
-              : Container(),
+          widget.frontPanel ?? Container()
         ],
       ),
     );
