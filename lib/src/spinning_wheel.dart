@@ -40,8 +40,12 @@ class SpinningWheel extends StatefulWidget {
   final double spinResistance;
 
   /// if true, the user can interact with the wheel while it spins
+  ///   tap to stop
   /// default is true
   final bool canInteractWhileSpinning;
+
+  /// drag the wheel
+  final bool canDragginWheel;
 
   /// will be rendered on top of the wheel and can be used to show a selector
   //final Image secondaryImage;
@@ -81,6 +85,7 @@ class SpinningWheel extends StatefulWidget {
     this.initialSpinAngle: 0.0,
     this.spinResistance: 0.5,
     this.canInteractWhileSpinning: true,
+    this.canDragginWheel: true,
     this.frontPanel,
     this.onUpdate,
     this.onEnd,
@@ -191,7 +196,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
 
   _startOrStop(dynamic velocity) {
     if (_animationController.isAnimating) {
-      _stopAnimation();
+      _stopAnimation( byHand: false );
     } else {
       // velocity is pixels per second in axis Y
       // we asume a drag from cuadrant 1 with high velocity (8000)
@@ -273,6 +278,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
 
   void _moveWheel(DragUpdateDetails details) {
     if (!_userCanInteract) return;
+    if ( !widget.canDragginWheel ) return;
 
     // user won't be able to get back in after dragin outside
     if (_offsetOutsideTimestamp != null) return;
@@ -294,8 +300,8 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
     }
   }
 
-  void _stopAnimation() {
-    if (!_userCanInteract) return;
+  void _stopAnimation( {bool byHand = true } ) {
+    if ( byHand && !_userCanInteract ) return;
 
     _offsetOutsideTimestamp = null;
     _animationController.stop();
@@ -306,6 +312,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
 
   void _startAnimationOnPanEnd(DragEndDetails details) {
     if (!_userCanInteract) return;
+    if (!widget.canDragginWheel ) return;
 
     if (_offsetOutsideTimestamp != null) {
       var difference = DateTime.now().difference(_offsetOutsideTimestamp);
