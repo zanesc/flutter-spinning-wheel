@@ -192,12 +192,17 @@ class _RouletteState extends State<Roulette> {
               backPanel: _spanLine(8, Image.asset('assets/images/roulette-8-300.png')),
               width: 310,
               height: 310,
-              initialSpinAngle: pi / 8, //_generateRandomAngle(),
+              //initialSpinAngle: 0,//pi / 8, //_generateRandomAngle(),
+              // initialSpinAngle: pi / 8, //_generateRandomAngle(),
+               initialSpinAngle: _generateRandomAngle(),
               spinResistance: _resistance,
               canInteractWhileSpinning: false,
-              canDragginWheel: false,
+              canDragginWheel: true,
               dividers: 8,
-              onUpdate: _dividerController.add,
+              onUpdate: (index ){
+                print( "onupdaet $index" );
+                _dividerController.add(index);
+                },
               onEnd: _dividerController.add,
               frontPanel: Container(
                   width: 40,
@@ -291,11 +296,11 @@ class RouletteScore extends StatelessWidget {
 }
 
 class Lines extends CustomPainter {
-  final int divider;
+ final int divider;
   final double lineWidth;
 
   Paint _paint;
-  Lines(this.divider, this.lineWidth) {}
+  Lines(this.divider, this.lineWidth);
 
   void _makePaint(Rect rect) {
     final shader = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [
@@ -310,10 +315,8 @@ class Lines extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = Path();
     final halfWidth = lineWidth / 2;
     final halfW = size.width / 2;
-    final halfH = size.height / 2;
 
     Rect rect = Rect.fromLTWH(-halfW, -halfWidth, size.width, 2 * halfWidth);
     // path.addArc(rect, 0, 2 * pi);
@@ -324,11 +327,21 @@ class Lines extends CustomPainter {
 
     //canvas.drawPath(path, paint);
     canvas.translate(size.width / 2, size.height / 2);
+    //canvas.rotate(-pi / 2 + (pi / divider)); //- pi/2+ (2*pi/divider/2) //中間右邊邊線 簡化
+    canvas.rotate(-pi / 2 ); //- pi/2+ (2*pi/divider/2) //中間右邊邊線 簡化
 
+    canvas.save();
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
     canvas.drawArc(rect, 0, 2 * pi, true, _paint);
-    for (var i = 0; i < divider; ++i) {
-      canvas.rotate(2 * pi / divider);
+    var lineCount = (divider).round();
+    canvas.restore();
+
+    for (var i = 0; i < lineCount; ++i) {
+      canvas.save();
+      canvas.rotate(2 * pi / lineCount * (i + 1));
+      canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
       canvas.drawArc(rect, 0, 2 * pi, true, _paint);
+      canvas.restore();
     }
   }
 

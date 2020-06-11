@@ -173,7 +173,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
     if (widget.shouldStartOrStop != null) {
       _subscription = widget.shouldStartOrStop.listen(_startOrStop);
     }
-
+    final alignUp = pi/ widget.dividers;
     _labels = [];
     if (widget.labels != null) {
       for (int i = 0; i < widget.dividers ?? []; ++i) {
@@ -182,7 +182,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
             transform: Matrix4.translationValues(0, 0, 0),
             alignment: Alignment.center,
             child: Transform.rotate(
-              angle: (i) * _dividerAngle+widget.initialSpinAngle,
+              angle: (i) * _dividerAngle+ alignUp,
               child: Container(
                 transform: Matrix4.translationValues(0, -widget.labelShift, 0),
                 child: widget.labels[i],
