@@ -21,7 +21,7 @@ class SpinningWheel extends StatefulWidget {
   //final Image image;
 
   /// background
-  final Widget  backPanel;
+  final Widget backPanel;
 
   /// number of equal divisions in the wheel
   final int dividers;
@@ -76,8 +76,7 @@ class SpinningWheel extends StatefulWidget {
   /// the parameter is a double for pixelsPerSecond in axis Y, which defaults to 8000.0 as a medium-high velocity
   final Stream shouldStartOrStop;
 
-  SpinningWheel(
-    {
+  SpinningWheel({
     @required this.width,
     @required this.height,
     @required this.dividers,
@@ -101,7 +100,8 @@ class SpinningWheel extends StatefulWidget {
   _SpinningWheelState createState() => _SpinningWheelState();
 }
 
-class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProviderStateMixin {
+class _SpinningWheelState extends State<SpinningWheel>
+    with SingleTickerProviderStateMixin {
   AnimationController _animationController;
   Animation<double> _animation;
 
@@ -159,8 +159,8 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
       vsync: this,
       duration: Duration(seconds: 0),
     );
-    _animation =
-        Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _animationController, curve: Curves.linear));
+    _animation = Tween(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.linear));
 
     _dividerAngle = _motion.anglePerDivision(widget.dividers);
     _initialSpinAngle = widget.initialSpinAngle;
@@ -173,7 +173,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
     if (widget.shouldStartOrStop != null) {
       _subscription = widget.shouldStartOrStop.listen(_startOrStop);
     }
-    final alignUp = pi/ widget.dividers;
+    final alignUp = pi / widget.dividers;
     _labels = [];
     if (widget.labels != null) {
       for (int i = 0; i < widget.dividers ?? []; ++i) {
@@ -182,7 +182,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
             transform: Matrix4.translationValues(0, 0, 0),
             alignment: Alignment.center,
             child: Transform.rotate(
-              angle: (i) * _dividerAngle+ alignUp,
+              angle: (i) * _dividerAngle + alignUp,
               child: Container(
                 transform: Matrix4.translationValues(0, -widget.labelShift, 0),
                 child: widget.labels[i],
@@ -196,7 +196,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
 
   _startOrStop(dynamic velocity) {
     if (_animationController.isAnimating) {
-      _stopAnimation( byHand: false );
+      _stopAnimation(byHand: false);
     } else {
       // velocity is pixels per second in axis Y
       // we asume a drag from cuadrant 1 with high velocity (8000)
@@ -230,7 +230,8 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
                 child: Stack(children: [widget.backPanel, ..._labels]),
                 builder: (context, child) {
                   _updateAnimationValues();
-                  widget.onUpdate(_currentDivider);
+                  widget.onUpdate(
+                      _currentDivider, _animationController.isAnimating);
                   return Transform.rotate(
                     angle: _initialSpinAngle + _currentDistance,
                     child: child,
@@ -244,7 +245,8 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
   }
 
   // user can interact only if widget allows or wheel is not spinning
-  bool get _userCanInteract => !_animationController.isAnimating || widget.canInteractWhileSpinning;
+  bool get _userCanInteract =>
+      !_animationController.isAnimating || widget.canInteractWhileSpinning;
 
   // transforms from global coordinates to local and store the value
   void _updateLocalPosition(Offset position) {
@@ -262,7 +264,8 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
     if (_animationController.isAnimating) {
       // calculate total distance covered
       var currentTime = _totalDuration * _animation.value;
-      _currentDistance = _motion.distance(_initialCircularVelocity, currentTime);
+      _currentDistance =
+          _motion.distance(_initialCircularVelocity, currentTime);
       if (_isBackwards) {
         _currentDistance = -_currentDistance;
       }
@@ -278,7 +281,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
 
   void _moveWheel(DragUpdateDetails details) {
     if (!_userCanInteract) return;
-    if ( !widget.canDragginWheel ) return;
+    if (!widget.canDragginWheel) return;
 
     // user won't be able to get back in after dragin outside
     if (_offsetOutsideTimestamp != null) return;
@@ -300,8 +303,8 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
     }
   }
 
-  void _stopAnimation( {bool byHand = true } ) {
-    if ( byHand && !_userCanInteract ) return;
+  void _stopAnimation({bool byHand = true}) {
+    if (byHand && !_userCanInteract) return;
 
     _offsetOutsideTimestamp = null;
     _animationController.stop();
@@ -312,7 +315,7 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
 
   void _startAnimationOnPanEnd(DragEndDetails details) {
     if (!_userCanInteract) return;
-    if (!widget.canDragginWheel ) return;
+    if (!widget.canDragginWheel) return;
 
     if (_offsetOutsideTimestamp != null) {
       var difference = DateTime.now().difference(_offsetOutsideTimestamp);
@@ -328,14 +331,16 @@ class _SpinningWheelState extends State<SpinningWheel> with SingleTickerProvider
   }
 
   void _startAnimation(Offset pixelsPerSecond) {
-    var velocity = _spinVelocity.getVelocity(_localPositionOnPanUpdate, pixelsPerSecond);
+    var velocity =
+        _spinVelocity.getVelocity(_localPositionOnPanUpdate, pixelsPerSecond);
 
     _localPositionOnPanUpdate = null;
     _isBackwards = velocity < 0;
     _initialCircularVelocity = pixelsPerSecondToRadians(velocity.abs());
     _totalDuration = _motion.duration(_initialCircularVelocity);
 
-    _animationController.duration = Duration(milliseconds: (_totalDuration * 1000).round());
+    _animationController.duration =
+        Duration(milliseconds: (_totalDuration * 1000).round());
 
     _animationController.reset();
     _animationController.forward();
